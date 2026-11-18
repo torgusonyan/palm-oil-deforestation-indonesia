@@ -1,2 +1,234 @@
-# palm-oil-deforestation-indonesia
+# **palm-oil-deforestation-indonesia**
+### **Main Dataset Resource**:
+https://trase.earth/open-data/datasets/supply-chains-indonesia-palm-oil
+### **Supporting Dataset Resource**:
+https://trase.earth/open-data/datasets/spatial-metrics-indonesia-palm-oil-palm-oil-deforestation-annual
+### Team :
+**Data Engineer & Airflow Pipeline**: Ryan Farid Pratama
+
+**Database & Data Modeling**: Muhammad Hanif Al Abid
+
+**Data Analyst**: Narda Parama Agung Noviantoro
+## **Background**
+Oil palm expansion has been an important driver of deforestation in Indonesia for the past 20 years, accounting for one third (3 million hectares) of Indonesia's loss of old-growth forest (Trase, 2024).
+In recent years, deforestation for industrial palm oil has been concentrated in the forest-rich provinces of Kalimantan. Four Kalimantan provinces accounted for 72% of all palm oil deforestation in Indonesia in 2018 to 2022 (Trase / SEI).
+Many exporters have zero-deforestation commitments, but the results are mixed: in 2021 to 2022, exporters with and without commitments sourced palm oil from areas with statistically similar deforestation rates (Trase / SEI).
+
+
+## Stakeholder
+
+Proyek ini melibatkan berbagai stakeholder yang memiliki peran dalam pencegahan human trafficking, perlindungan korban, penegakan hukum, serta pengembangan kebijakan dan strategi berbasis data.
+
+| Stakeholder | Peran |
+|---|---|
+| **United Nations (UN)** | Mengembangkan kerangka kerja internasional, kebijakan, dan kerja sama dalam penanganan perdagangan manusia serta perlindungan hak asasi manusia | 
+| **Kepolisian / Aparat Penegak Hukum** | Melakukan penyelidikan kasus, mengidentifikasi pelaku dan jaringan perdagangan manusia, serta mendukung proses penegakan hukum | 
+| **UNICEF** | Melindungi anak dari perdagangan manusia, eksploitasi, kekerasan, dan bentuk pelanggaran lainnya | Tinggi |
+| **Perusahaan Platform Media Sosial** | Mendeteksi dan mencegah aktivitas terkait perdagangan manusia serta meningkatkan keamanan dan mekanisme pelaporan di platform | 
+| **Researchers / Peneliti** | Menganalisis pola perdagangan manusia, mengidentifikasi faktor risiko, dan menghasilkan temuan berbasis data untuk mendukung kebijakan | 
+
+## **SDG**
+
+| SDG | Fokus | Keterkaitan dengan Human Trafficking |
+|---|---|---|
+| **SDG 5** | Kesetaraan Gender | Mengatasi kerentanan berbasis gender serta eksploitasi seksual dalam perdagangan manusia |
+| **SDG 8** | Pekerjaan Layak dan Pertumbuhan Ekonomi | Mengatasi forced labour dan eksploitasi tenaga kerja serta mendukung kondisi kerja yang layak |
+| **SDG 10** | Berkurangnya Kesenjangan | Mengurangi kerentanan kelompok sosial dan ekonomi tertentu terhadap perdagangan dan eksploitasi |
+| **SDG 16** | Perdamaian, Keadilan dan Kelembagaan yang Tangguh | Mendukung perlindungan hak asasi manusia, penegakan hukum, perlindungan korban, dan penguatan institusi |
+
+
+## **Data Engineering (Pipeline & Infrastructure)**
+### Data Engineering Pipeline
+
+Alur kerja *data engineering* dirancang untuk memproses data dari sumber hingga siap dianalisis melalui beberapa tahapan utama:
+
+#### 1. Alur Proses Pipeline (ETL & Validation)
+![Pipeline](https://github.com/dutarangga3107-max/CODA-020-Final_Project/blob/main/Schema/pipeline%20.png?raw=true)
+* **Extraction**: Membaca dan mengumpulkan data mentah dari *website* CTDC tanpa membebani kinerja sistem sumber.
+* **Data Validation**: Memastikan data mematuhi logika bisnis (misal: validasi usia dan format data yang sesuai).
+* **Transformation**: 
+  * Pembersihan data: Menangani nilai kosong (*NULL*) dan menghapus baris duplikat.
+  * Pemformatan data: Mengubah data mentah menjadi format yang mudah dianalisis.
+* **Loading**: Memindahkan data yang sudah bersih dan valid ke destinasi akhir di basis data Neon.
+
+#### 2. Airflow Orchestration
+* **DAG Structure**: Menggunakan 1 DAG (`FP_dag.py`) dengan 3 *task* linear: `extract` → `transform` → `load`.
+* **Execution**: Eksekusi dijalankan via `BashOperator`, di mana tiap *task* berjalan sebagai *subprocess* Python independen.
+* **Schedule**: Dijadwalkan berjalan setiap hari Sabtu, menit ke-10 hingga 30 (kelipatan 10) pada jam 09:00 pagi.
+* **Retry Policy**: Konfigurasi otomatis 1 kali percobaan ulang (*retry*) dengan jeda 5 menit jika terjadi kegagalan pada *task*.
+
+#### 3. Environment & Infrastructure
+* **Docker Setup**: Menggunakan Airflow via *Docker Compose* dengan *custom image* `airflow-spark` (basis `apache/airflow:2.3.4` yang dilengkapi Java serta pustaka pendukung seperti *great_expectations*, *pandas*, *sqlalchemy*, *beautifulsoup4*, *pyarrow*, dll).
+* **Storage Volume**: Folder direktori `data/`, `dags/`, `scripts/`, dan `logs/` di-mount sebagai *volume* lokal sehingga file *parquet* tetap aman meskipun *container* direstart.
+### Database & Data Modeling 
+Proses ini mengubah data kasus *trafficking* dan *exploitation* menjadi struktur basis data relasional yang terorganisasi. Informasi terkait korban, eksploitasi, *recruitment*, dan faktor pendukung dipisahkan ke dalam tabel *fact* dan *dimension* untuk memudahkan analisis risiko dan *profiling* korban.
+#### Database Architecture 
+![Star Schema](https://github.com/dutarangga3107-max/CODA-020-Final_Project/blob/main/Schema/Schema.png?raw=true)
+Arsitektur basis data dirancang menggunakan *Star Schema*, yang terdiri dari:
+* **Fact Table (`fact_trafficking_cases`)**: Menyimpan metrik utama kasus dan kunci relasi (*Foreign Keys*).
+* **Dimension Tables**: Memisahkan atribut detail untuk menghindari redundansi data, yang meliputi:
+  * `dim_demographics`: Umur, *gender*, kewarganegaraan, dan negara eksploitasi.
+  * `dim_exploitation` & `dim_means`: Sektor, jenis eksploitasi, dan cara penjeratan.
+  * `dim_recruiter`: Hubungan perekrut dengan korban.
+### Data Preparation
+#### Data Type Formatting & Integrity
+* **Penyesuaian Tipe Data**: Mengonfigurasi kolom waktu (seperti `yearOfRegistration`) menjadi format teks (`VARCHAR`) untuk menjaga konsistensi karakteristik data.
+* **Integritas Relasional**: Menerapkan *Primary Key* dan *Foreign Key* yang ketat antar tabel untuk mencegah inkonsistensi data saat proses penggabungan.
+
+### SQL & Analytics
+Untuk mendukung analisis dan menjawab berbagai pertanyaan riset (*Key Questions*) tanpa harus menyusun sintaks `JOIN` yang rumit secara berulang, dirancang *SQL Views* terpusat yang menghubungkan *fact table* dengan berbagai tabel dimensi seperti demografi, eksploitasi, dan perekrut.
+
+Contoh implementasi *SQL View* untuk analisis demografi:
+
+```sql
+CREATE VIEW analisis_demografi AS
+SELECT
+    f.case_id,
+    f.yearofregistration,
+    f.traffickmonths,
+    d.gender,
+    d.agebroad,
+    d.citizenship,
+    d.countryofexploitation
+FROM fact_trafficking_cases f
+JOIN dim_demographics d ON f.demographic_id = d.demographic_id;
+```
+## **Data Dictionary**
+
+#### A. DEMOGRAPHICS
+
+| Column | Data Type | Definisi |
+|---|---|---|
+| `demographic_id` | serial | Primary key yang menjadi identitas unik setiap data demografi korban |
+| `gender` | varchar(50) | Gender korban |
+| `agebroad` | varchar(50) | Kelompok usia korban |
+| `citizenship` | varchar(100) | Kewarganegaraan korban |
+| `countryofexploitation` | varchar(100) | Negara tempat korban mengalami eksploitasi |
+
+---
+
+#### B. EXPLOITATION
+
+| Column | Data Type | Definisi |
+|---|---|---|
+| `exploitation_id` | serial | Primary key yang menjadi identitas unik setiap data eksploitasi |
+| `isforcedlabour` | boolean | Menunjukkan apakah korban mengalami forced labour |
+| `issexualexploit` | boolean | Menunjukkan apakah korban mengalami eksploitasi seksual |
+| `isotherexploit` | boolean | Menunjukkan apakah korban mengalami bentuk eksploitasi lainnya |
+| `sectoroflabouragriculture` | boolean | Menunjukkan apakah eksploitasi berkaitan dengan sektor pertanian |
+| `sectoroflabourconstruction` | boolean | Menunjukkan apakah eksploitasi berkaitan dengan sektor konstruksi |
+| `sectoroflabourdomesticwork` | boolean | Menunjukkan apakah eksploitasi berkaitan dengan pekerjaan domestik |
+| `sectoroflabourhospitality` | boolean | Menunjukkan apakah eksploitasi berkaitan dengan sektor hospitality |
+| `sectorofsexprostitution` | boolean | Menunjukkan apakah eksploitasi berkaitan dengan sektor prostitusi |
+| `sectorofsexpornography` | boolean | Menunjukkan apakah eksploitasi berkaitan dengan sektor pornografi |
+
+---
+
+#### C. MEANS
+
+| Column | Data Type | Definisi |
+|---|---|---|
+| `means_id` | serial | Primary key yang menjadi identitas unik setiap data metode eksploitasi |
+| `meansdebtbondageearnings` | boolean | Menunjukkan penggunaan debt bondage atau keterikatan melalui utang/penghasilan dalam eksploitasi |
+| `meansthreats` | boolean | Menunjukkan penggunaan ancaman terhadap korban |
+| `meansabusepsyphysex` | boolean | Menunjukkan adanya penyalahgunaan atau kekerasan psikologis, fisik, atau seksual |
+| `meansfalsepromises` | boolean | Menunjukkan penggunaan janji palsu dalam proses recruitment atau eksploitasi |
+| `meansdrugsalcohol` | boolean | Menunjukkan keterlibatan drugs atau alcohol dalam proses eksploitasi |
+| `meansdenybasicneeds` | boolean | Menunjukkan adanya pembatasan atau penolakan kebutuhan dasar korban |
+| `meansexcessiveworkhours` | boolean | Menunjukkan pemberian jam kerja yang berlebihan kepada korban |
+| `meanswithholddocs` | boolean | Menunjukkan adanya penahanan dokumen pribadi korban |
+
+---
+
+#### D. RECRUITER
+
+| Column | Data Type | Definisi |
+|---|---|---|
+| `recruiter_id` | serial | Primary key yang menjadi identitas unik setiap data hubungan recruiter |
+| `recruiterrelationintimatepartner` | boolean | Menunjukkan apakah recruiter merupakan pasangan atau intimate partner korban |
+| `recruiterrelationfriend` | boolean | Menunjukkan apakah recruiter merupakan teman korban |
+| `recruiterrelationfamily` | boolean | Menunjukkan apakah recruiter memiliki hubungan keluarga dengan korban |
+| `recruiterrelationother` | boolean | Menunjukkan apakah recruiter memiliki hubungan lainnya dengan korban |
+
+---
+
+#### E. TRAFFICKING CASES
+
+| Column | Data Type | Definisi |
+|---|---|---|
+| `case_id` | serial | Primary key yang menjadi identitas unik setiap kasus trafficking |
+| `yearofregistration` | varchar(10) | Tahun ketika kasus trafficking dicatat atau diregistrasikan |
+| `traffickmonths` | varchar(50) | Durasi korban mengalami trafficking atau eksploitasi dalam bulan |
+| `demographic_id` | integer | Foreign key yang menghubungkan kasus dengan data demografi korban |
+| `means_id` | integer | Foreign key yang menghubungkan kasus dengan metode eksploitasi |
+| `exploitation_id` | integer | Foreign key yang menghubungkan kasus dengan bentuk dan sektor eksploitasi |
+| `recruiter_id` | integer | Foreign key yang menghubungkan kasus dengan hubungan recruiter |
+
+## **Problem Statement**
+Sulitnya mengidentifikasi kelompok korbann, sektor pekerjaan, dan pola recruitement yang memiliki resiko exploitasi lebih tinggi, serta memahami bagaimana karakteristik tersebut berkiatan dengan bentuk eksploitasi yang dialami korban. Belum diketahui apakah hubungan tertentu antara korban dan recruiter berkaitan dengan tingkat eksploitasi yang lebih tinggi dan kelompok demografis mana yang paling rentan terhadap pola recruitement tersebut.
+| SMART          | Framework                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          |
+| -------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Specific**   | Mengidentifikasi **kelompok demografis, sektor eksploitasi, recruitment relationship, dan bentuk eksploitasi** yang memiliki tingkat risiko lebih tinggi, serta mengetahui hubungan recruiter mana yang paling sering berujung pada **forced labour atau sexual exploitation**. Selain itu, menganalisis tingkat kontrol yang dialami korban berdasarkan **8 bentuk means of control**.                                                                                                                                                                                            |
+| **Measurable** | Mengukur risiko menggunakan **jumlah korban (count), persentase korban (%), dan exploitation rate (%)** berdasarkan `ageBroad`, `gender`, `citizenship`, sektor, dan recruitment relationship. Hubungan recruiter juga dibandingkan berdasarkan proporsi korban yang mengalami **forced labour, sexual exploitation, dan other exploitation**. Tingkat kontrol korban diukur dengan menjumlahkan **8 kolom `means`**, sehingga setiap korban memiliki **Control Means Score 0–8**. Contohnya, korban dengan nilai **6/8** berarti mengalami 6 dari 8 bentuk kontrol yang tercatat. |
+| **Achievable** | Analisis dapat dilakukan berdasarkan variabel yang tersedia dalam dataset, yaitu karakteristik demografis, sektor eksploitasi, recruitment relationship, exploitation outcome, dan 8 indikator means of control. Analisis menggunakan **descriptive statistics, cross-tabulation, persentase, exploitation rate, dan Chi-Square Test** untuk melihat hubungan antarvariabel.                                                                                                                                                                                                       |
+| **Relevant**   | Hasil analisis dapat membantu **United Nations, kepolisian, UNICEF, platform media sosial, dan researchers** mengidentifikasi kelompok yang lebih rentan, recruitment relationship yang lebih sering berkaitan dengan bentuk eksploitasi tertentu, serta tingkat kontrol yang dialami korban. Informasi ini dapat mendukung strategi **pencegahan, identifikasi, perlindungan korban, dan penegakan hukum**.                                                                                                                                                                       |
+| **Time-Bound** | Analisis mencakup kasus yang tercatat dalam dataset selama periode **2002–2024**. Perubahan jumlah korban, pola recruitment relationship, sektor, bentuk eksploitasi, dan tingkat kontrol dapat dibandingkan berdasarkan tahun registrasi untuk melihat **tren selama 23 tahun**. Hasil historis tersebut dapat menjadi dasar untuk analisis dan proyeksi pola trafficking di periode berikutnya.                                                                                                                                                                                  |
+
+## **Key Questions**
+1. Kelompok demografis mana yang memiliki resiko eksploitasi tertinggi berdasarkan usia, gender, dan citizhenship?
+2. Sektor mana saja yang paling rentan terhadap eksploitasi, dan bentuk eksploitasi apa yang paling banyak terjadi di sektor tersebut?
+3. Apakah hubungan antara korban dan recruiter berkaitan dengan perbedaan resiko dan bentuk eksploitasi yang dialami korban?
+4. Kelompok usia dan gender mana yang paling sering direkrut melalui hubungan dekat seperti family, friend, atau intimate partner, dan bagaimana tingkat eksploitasi kelompok tersebut?
+5. Kombinasi faktor demografis, sektor pekerajaan, dan recruitemnt relationship seperti apa yang membentuk profil korban dengan resiko eksploitasi paling tinggi?
+6. Bagaimana tren jumlah korban berdasarkan recruitment relationship dari tahun ke tahun?
+
+
+## **Key Performance Indicators (KPI)**
+**1. Exploitation Rate**<br>
+**Explanation:** Mengukur persentase korban yang mengalami forced labour dari total korban.<br>
+**Purpose:** Mengetahui proporsi keseluruhan korban yang mengalami eksploitasi.
+  
+**2. Forced Labour Rate**<br>
+**Explanation:** Mengukur persentase korban yang mengalami forced labour dari total korban.<br>
+**Purpose:** Mengidentifikasi seberapa sering kasus kerja paksa terjadi dalam dataset ini. 
+  
+**3. Sexual Exploitation Rate**<br>
+**Explanation:** Mengukur persentase korban yang mengalami sexual exploitation dari total korban.<br>
+**Purpose:** Mengetahui seberapa besar proporsi korban yang mengalami eksploitasi seksual.
+  
+**4. Debt Bondage Rate**<br>
+**Explanation:** Mengukur persentase korban yang mengalami debt bondage dari total korban.<br>
+**Purpose:** Mengidentifikasi tingkat eksploitasi yang berkaitan dengan keterikatan utang.
+  
+**5. Document Withholding Rate**<br>
+**Explanation:** Mengukur persentase korban yang mengalami penahanan atau penyitaan dokumen dari total korban.<br>
+**Purpose:** Mengetahui seberapa sering terjadi penahanan dokumen sebagao salah satu indikator resiko eksploitasi.
+  
+**6. High-Risk Sector Agriculture**<br>
+**Explanation:** Mengukur exploitation rate khusus pada korban yang bekerja di sektor Agriculture.<br>
+**Purpose:** Mengidentifikasi apakah sektor Agricukture merupakan sektor dengan resiko eksploitasi yang tinggi.
+  
+**7. High-Risk Age**<br>
+**Explanation:** Menemukan kelompok usia dengan exploitation rate tertinggi.<br>
+**Purpose:** Mengidentifikasi kelompok usia yang paling rentan terhadap eksploitasi.
+  
+**8. High-Risk Citizenship**<br>
+**Explanation:** Mengukur exploitation rate berdasarkan kewarganegaraan korban.<br>
+**Purpose:** Mengidentifikasi kelompok kewarganegaraan dengan tingkat resiko eksploitasi tertinggi.
+  
+**9. Recruitement Risk**<br>
+**Explanation:** Mengukur exploitation rate berdasarkan recruitment relationship atau hubungan antara korban dan pihak yang merekrutnya.<br>
+**Purpose:** Mengidentifikasi pola hubungan rekrutmen yang memiliki tingkat resiko eksploitasi lebih tinggi.
+
+## **Key Questions & Findings**
+**KQ1**. Risiko eksploitasi sangat dipengaruhi gender dan usia, perempuan (khususnya anak 09–17 tahun) dominan mengalami eksploitasi seksual, sementara laki-laki dominan mengalami kerja paksa, dengan pola yang juga bervariasi menurut kewarganegaraan.<br>
+**KQ2.** Setiap sektor memiliki "signature" eksploitasi yang khas dan hampir murni satu jenis seperti sektor seks (prostitusi, pornografi) hampir eksklusif eksploitasi seksual, sektor kerja fisik (agriculture, construction) hampir eksklusif kerja paksa, kecuali hospitality yang menunjukkan risiko ganda.<br>
+**KQ3.** Relasi personal yang dekat (intimate partner, family) justru berkorelasi dengan rate eksploitasi seksual tertinggi, sedangkan relasi non-personal ("other"/agen) lebih berkorelasi dengan kerja paksa  membalikkan asumsi umum bahwa orang asing adalah ancaman utama.<br>
+**KQ4.** Anak perempuan yang direkrut melalui relasi dekat memiliki risiko eksploitasi seksual paling ekstrem, sementara anak laki-laki menunjukkan pola eksploitasi yang lebih campuran antara kerja paksa dan seksual.<br>
+**KQ5.** Profil korban dengan risiko paling ekstrem adalah kombinasi anak usia sangat muda, sektor eksploitasi seksual, dan direkrut oleh keluarga sendiri seperti menunjukkan bahwa kombinasi faktor demografis, sektor, dan relasi recruiter jauh lebih prediktif dibanding faktor tunggal manapun.<br>
+**KQ6**. Berdasarkan uji statistik Spearman ($\rho = 0,7204$; $p = 0,000106$), jumlah korban dengan hubungan rekrutmen Other menunjukkan tren peningkatan jangka panjang yang signifikan dengan puncak tertinggi pada 2016, sementara kategori Family, Friend, dan Intimate Partner masing-masing mencapai puncaknya pada 2016 atau 2019 sebelum mengalami penurunan hingga tahun 2024.
+
+## **Conclusion**
+Proyek ini berhasil mengungkap bahwa risiko TPPO terbentuk dari kombinasi spesifik antara siapa korbannya (usia, gender, kewarganegaraan), di sektor apa mereka dieksploitasi, dan melalui relasi apa mereka direkrut dengan relasi kedekatan personal sebagai titik kerentanan yang paling kritis namun paling sulit dideteksi. Temuan ini memberikan dasar berbasis data bagi pemangku kepentingan untuk merancang intervensi yang lebih tepat sasaran tidak hanya berfokus pada pengawasan jalur migrasi kerja formal dan sindikat eksternal, tetapi juga pada edukasi dan deteksi dini terhadap pola manipulasi hubungan dekat di lingkungan terdekat korban.
+
 Correlation between deforestation and palm oil industries
