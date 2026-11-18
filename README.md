@@ -17,16 +17,8 @@ Many exporters have zero-deforestation commitments, but the results are mixed: i
 
 ## Stakeholder
 
-stakeholder : The sustainability/procurement team of a companny planning to buy palm oil from Kalimantan.
+The stakeholder in this case are the sustainability/procurement team of a companny planning to buy palm oil from Kalimantan.
 
--- Tabel dibawah jika tidak di perlukan, bisa dihapus aja
-| Stakeholder | Peran |
-|---|---|
-| **United Nations (UN)** | Mengembangkan kerangka kerja internasional, kebijakan, dan kerja sama dalam penanganan perdagangan manusia serta perlindungan hak asasi manusia | 
-| **Kepolisian / Aparat Penegak Hukum** | Melakukan penyelidikan kasus, mengidentifikasi pelaku dan jaringan perdagangan manusia, serta mendukung proses penegakan hukum | 
-| **UNICEF** | Melindungi anak dari perdagangan manusia, eksploitasi, kekerasan, dan bentuk pelanggaran lainnya | Tinggi |
-| **Perusahaan Platform Media Sosial** | Mendeteksi dan mencegah aktivitas terkait perdagangan manusia serta meningkatkan keamanan dan mekanisme pelaporan di platform | 
-| **Researchers / Peneliti** | Menganalisis pola perdagangan manusia, mengidentifikasi faktor risiko, dan menghasilkan temuan berbasis data untuk mendukung kebijakan | 
 
 ## **SDG**
 
@@ -61,7 +53,7 @@ Alur kerja *data engineering* dirancang untuk memproses data dari sumber hingga 
 ### Database & Data Modeling 
 Proses ini mengubah data kasus *trafficking* dan *exploitation* menjadi struktur basis data relasional yang terorganisasi. Informasi terkait korban, eksploitasi, *recruitment*, dan faktor pendukung dipisahkan ke dalam tabel *fact* dan *dimension* untuk memudahkan analisis risiko dan *profiling* korban.
 #### Database Architecture 
-![Star Schema](https://github.com/dutarangga3107-max/CODA-020-Final_Project/blob/main/Schema/Schema.png?raw=true)
+![Star Schema](https://github.com/torgusonyan/palm-oil-deforestation-indonesia/blob/617afc73be751ac72135764f137c67f7515305bf/Schema/Schema.png?raw=true)
 Arsitektur basis data dirancang menggunakan *Star Schema*, yang terdiri dari:
 * **Fact Table (`fact_trafficking_cases`)**: Menyimpan metrik utama kasus dan kunci relasi (*Foreign Keys*).
 * **Dimension Tables**: Memisahkan atribut detail untuk menghindari redundansi data, yang meliputi:
@@ -163,60 +155,47 @@ JOIN dim_demographics d ON f.demographic_id = d.demographic_id;
 | `recruiter_id` | integer | Foreign key yang menghubungkan kasus dengan hubungan recruiter |
 
 ## **Problem Statement**
-Sulitnya mengidentifikasi kelompok korbann, sektor pekerjaan, dan pola recruitement yang memiliki resiko exploitasi lebih tinggi, serta memahami bagaimana karakteristik tersebut berkiatan dengan bentuk eksploitasi yang dialami korban. Belum diketahui apakah hubungan tertentu antara korban dan recruiter berkaitan dengan tingkat eksploitasi yang lebih tinggi dan kelompok demografis mana yang paling rentan terhadap pola recruitement tersebut.
-| SMART          | Framework                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          |
-| -------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Specific**   | Mengidentifikasi **kelompok demografis, sektor eksploitasi, recruitment relationship, dan bentuk eksploitasi** yang memiliki tingkat risiko lebih tinggi, serta mengetahui hubungan recruiter mana yang paling sering berujung pada **forced labour atau sexual exploitation**. Selain itu, menganalisis tingkat kontrol yang dialami korban berdasarkan **8 bentuk means of control**.                                                                                                                                                                                            |
-| **Measurable** | Mengukur risiko menggunakan **jumlah korban (count), persentase korban (%), dan exploitation rate (%)** berdasarkan `ageBroad`, `gender`, `citizenship`, sektor, dan recruitment relationship. Hubungan recruiter juga dibandingkan berdasarkan proporsi korban yang mengalami **forced labour, sexual exploitation, dan other exploitation**. Tingkat kontrol korban diukur dengan menjumlahkan **8 kolom `means`**, sehingga setiap korban memiliki **Control Means Score 0–8**. Contohnya, korban dengan nilai **6/8** berarti mengalami 6 dari 8 bentuk kontrol yang tercatat. |
-| **Achievable** | Analisis dapat dilakukan berdasarkan variabel yang tersedia dalam dataset, yaitu karakteristik demografis, sektor eksploitasi, recruitment relationship, exploitation outcome, dan 8 indikator means of control. Analisis menggunakan **descriptive statistics, cross-tabulation, persentase, exploitation rate, dan Chi-Square Test** untuk melihat hubungan antarvariabel.                                                                                                                                                                                                       |
-| **Relevant**   | Hasil analisis dapat membantu **United Nations, kepolisian, UNICEF, platform media sosial, dan researchers** mengidentifikasi kelompok yang lebih rentan, recruitment relationship yang lebih sering berkaitan dengan bentuk eksploitasi tertentu, serta tingkat kontrol yang dialami korban. Informasi ini dapat mendukung strategi **pencegahan, identifikasi, perlindungan korban, dan penegakan hukum**.                                                                                                                                                                       |
-| **Time-Bound** | Analisis mencakup kasus yang tercatat dalam dataset selama periode **2002–2024**. Perubahan jumlah korban, pola recruitment relationship, sektor, bentuk eksploitasi, dan tingkat kontrol dapat dibandingkan berdasarkan tahun registrasi untuk melihat **tren selama 23 tahun**. Hasil historis tersebut dapat menjadi dasar untuk analisis dan proyeksi pola trafficking di periode berikutnya.                                                                                                                                                                                  |
+We help the sustainability/procurement team of a palm oil buying company avoid sourcing from high deforestation risk areas, by analysing Trase palm oil supply chain data from 2018 to 2024 joined with industrial palm oil deforestation data per province, to identify the top 5 high-risk kabupaten in Kalimantan and the exporter groups sourcing from them, so that these can be avoided in sourcing decisions within the next 1 year.
 
-## **Key Questions**
-1. Kelompok demografis mana yang memiliki resiko eksploitasi tertinggi berdasarkan usia, gender, dan citizhenship?
-2. Sektor mana saja yang paling rentan terhadap eksploitasi, dan bentuk eksploitasi apa yang paling banyak terjadi di sektor tersebut?
-3. Apakah hubungan antara korban dan recruiter berkaitan dengan perbedaan resiko dan bentuk eksploitasi yang dialami korban?
-4. Kelompok usia dan gender mana yang paling sering direkrut melalui hubungan dekat seperti family, friend, atau intimate partner, dan bagaimana tingkat eksploitasi kelompok tersebut?
-5. Kombinasi faktor demografis, sektor pekerajaan, dan recruitemnt relationship seperti apa yang membentuk profil korban dengan resiko eksploitasi paling tinggi?
-6. Bagaimana tren jumlah korban berdasarkan recruitment relationship dari tahun ke tahun?
+## **Objective**
+Identify the top 5 high-risk kabupaten in Kalimantan and the exporter groups sourcing from them, so that the sustainability/procurement team of a palm oil buying company can avoid high deforestation risk in its sourcing decisions. The analysis will also show which product types these high-risk exporter groups trade, compare deforestation intensity by commitment status and product type, calculate the emissions exposure linked to the top 5 kabupaten, and measure how much of each province's industrial palm oil deforestation is linked to them, using the supporting province deforestation data.
+
+Results will be shown in a Tableau dashboard with recommendations on which kabupaten and exporters to avoid.
+
+Data Period: 2018 to 2024, includes the full range of the main dataset. The supporting dataset is filtered to the same years.
+
+## **Analysis Question (5w+1H)**
+- **WHAT**: What is the deforestation intensity of Kalimantan's palm oil supply chain, how much higher is it in the top 5 kabupaten, and which product type carries higher intensity? How much greenhouse gas emissions exposure is linked to the top 5 high-risk kabupaten?
+
+- **WHERE**: Which kabupaten have the highest deforestation intensity and exposure, and which provinces do they belong to? Which provinces have the largest industrial palm oil deforestation?
+
+- **WHO**: Which exporter groups and importing countries source the most palm oil from the top 5 high-risk kabupaten, and which product types do these exporter groups trade? Which exporter groups have the lowest deforestation risk and can be recommended to buyers instead?
+
+- **WHEN**: When did industrial palm oil deforestation in each Kalimantan province rise or fall between 2018 and 2024, and did supply chain deforestation exposure change in the same years?
+
+- **WHY**: Why are some kabupaten riskier? Do they have a larger share of volume from exporters with None or Unknown commitment status, and are they in provinces with high industrial palm oil deforestation?
+
+- **HOW**: How much of Kalimantan's deforestation exposure would be avoided if buyers stopped sourcing from the top 5 high-risk kabupaten?
 
 
 ## **Key Performance Indicators (KPI)**
-**1. Exploitation Rate**<br>
-**Explanation:** Mengukur persentase korban yang mengalami forced labour dari total korban.<br>
-**Purpose:** Mengetahui proporsi keseluruhan korban yang mengalami eksploitasi.
+**1. Deforestation Intensity**<br>
+Total exposure / total volume x 1,000 (ha per 1,000 t), calculated per group.  
+Baseline: overall Kalimantan intensity.
   
-**2. Forced Labour Rate**<br>
-**Explanation:** Mengukur persentase korban yang mengalami forced labour dari total korban.<br>
-**Purpose:** Mengidentifikasi seberapa sering kasus kerja paksa terjadi dalam dataset ini. 
+**2. Top 5 Share of Province Deforestation (%)**<br>
+top 5 exposure / province industrial palm oil deforestation x 100
+
   
-**3. Sexual Exploitation Rate**<br>
-**Explanation:** Mengukur persentase korban yang mengalami sexual exploitation dari total korban.<br>
-**Purpose:** Mengetahui seberapa besar proporsi korban yang mengalami eksploitasi seksual.
+**3. Top 5 Volune Share (%)**<br>
+top 5 volume / total volume x 100
   
-**4. Debt Bondage Rate**<br>
-**Explanation:** Mengukur persentase korban yang mengalami debt bondage dari total korban.<br>
-**Purpose:** Mengidentifikasi tingkat eksploitasi yang berkaitan dengan keterikatan utang.
+**4. Exposure avoided (%)**<br>
+top 5 exposure / total exposure x 100.
   
-**5. Document Withholding Rate**<br>
-**Explanation:** Mengukur persentase korban yang mengalami penahanan atau penyitaan dokumen dari total korban.<br>
-**Purpose:** Mengetahui seberapa sering terjadi penahanan dokumen sebagao salah satu indikator resiko eksploitasi.
+**5. Total Emission Exposure**<br>
+sum of emissions for the top 5 kabupaten
   
-**6. High-Risk Sector Agriculture**<br>
-**Explanation:** Mengukur exploitation rate khusus pada korban yang bekerja di sektor Agriculture.<br>
-**Purpose:** Mengidentifikasi apakah sektor Agricukture merupakan sektor dengan resiko eksploitasi yang tinggi.
-  
-**7. High-Risk Age**<br>
-**Explanation:** Menemukan kelompok usia dengan exploitation rate tertinggi.<br>
-**Purpose:** Mengidentifikasi kelompok usia yang paling rentan terhadap eksploitasi.
-  
-**8. High-Risk Citizenship**<br>
-**Explanation:** Mengukur exploitation rate berdasarkan kewarganegaraan korban.<br>
-**Purpose:** Mengidentifikasi kelompok kewarganegaraan dengan tingkat resiko eksploitasi tertinggi.
-  
-**9. Recruitement Risk**<br>
-**Explanation:** Mengukur exploitation rate berdasarkan recruitment relationship atau hubungan antara korban dan pihak yang merekrutnya.<br>
-**Purpose:** Mengidentifikasi pola hubungan rekrutmen yang memiliki tingkat resiko eksploitasi lebih tinggi.
 
 ## **Key Questions & Findings**
 **KQ1**. Risiko eksploitasi sangat dipengaruhi gender dan usia, perempuan (khususnya anak 09–17 tahun) dominan mengalami eksploitasi seksual, sementara laki-laki dominan mengalami kerja paksa, dengan pola yang juga bervariasi menurut kewarganegaraan.<br>

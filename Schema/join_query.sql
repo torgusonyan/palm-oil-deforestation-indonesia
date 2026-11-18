@@ -1,17 +1,10 @@
-SELECT
-    f.province_of_production_trase_id,
-    f.province_of_production,
-    f.year,
-    f.kabupaten_of_production,
-    f.product_type,
-    f.exporter_group,
-    f.zero_deforestation_indonesia_palm_oil,
-    f.country_of_first_import,
-    f.palm_oil_deforestation_annual_exposure,
-    f.volume,
-    f.total_emission_exposure,
-    d.annual_palm_deforestation_hectares
+create view palm_oil AS
+SELECT f.*, p.province_of_production, p.kabupaten_of_production,
+       pr.product_type, pr.exporter_group,
+       pr.zero_deforestation_indonesia_palm_oil, pr.country_of_first_import,
+       d.annual_palm_deforestation_hectares
 FROM fact_palm_oil f
+JOIN dim_province p ON f.province_key = p.province_key
+JOIN dim_product pr ON f.product_key = pr.product_key
 LEFT JOIN dim_deforestation d
-    ON f.year = d.year
-   AND f.province_of_production_trase_id = d.region_trase_id;
+    ON f.region_trase_id = d.region_trase_id AND f.year = d.year;
