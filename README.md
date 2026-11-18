@@ -17,8 +17,9 @@ Many exporters have zero-deforestation commitments, but the results are mixed: i
 
 ## Stakeholder
 
-Proyek ini melibatkan berbagai stakeholder yang memiliki peran dalam pencegahan human trafficking, perlindungan korban, penegakan hukum, serta pengembangan kebijakan dan strategi berbasis data.
+stakeholder : The sustainability/procurement team of a companny planning to buy palm oil from Kalimantan.
 
+-- Tabel dibawah jika tidak di perlukan, bisa dihapus aja
 | Stakeholder | Peran |
 |---|---|
 | **United Nations (UN)** | Mengembangkan kerangka kerja internasional, kebijakan, dan kerja sama dalam penanganan perdagangan manusia serta perlindungan hak asasi manusia | 
@@ -29,12 +30,9 @@ Proyek ini melibatkan berbagai stakeholder yang memiliki peran dalam pencegahan 
 
 ## **SDG**
 
-| SDG | Fokus | Keterkaitan dengan Human Trafficking |
+| SDG | Focus | Connection with Indonesian Palm oil |
 |---|---|---|
-| **SDG 5** | Kesetaraan Gender | Mengatasi kerentanan berbasis gender serta eksploitasi seksual dalam perdagangan manusia |
-| **SDG 8** | Pekerjaan Layak dan Pertumbuhan Ekonomi | Mengatasi forced labour dan eksploitasi tenaga kerja serta mendukung kondisi kerja yang layak |
-| **SDG 10** | Berkurangnya Kesenjangan | Mengurangi kerentanan kelompok sosial dan ekonomi tertentu terhadap perdagangan dan eksploitasi |
-| **SDG 16** | Perdamaian, Keadilan dan Kelembagaan yang Tangguh | Mendukung perlindungan hak asasi manusia, penegakan hukum, perlindungan korban, dan penguatan institusi |
+| **SDG 15** | Life on Land | Deforestation and Habitat Loss, Land Degradation and Peatlands, and Sustainable Solution |
 
 
 ## **Data Engineering (Pipeline & Infrastructure)**
