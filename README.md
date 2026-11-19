@@ -27,29 +27,29 @@ The stakeholder in this case are the sustainability/procurement team of a compan
 | **SDG 15** | Life on Land | Deforestation and Habitat Loss, Land Degradation and Peatlands, and Sustainable Solution |
 
 
-## **Data Engineering (Pipeline & Infrastructure)** (belum diganti)
-### Data Engineering Pipeline
+## **Data Engineering (Pipeline & Infrastructure)**
+The Data Engineering workflow is built to process raw Kalimantan palm oil supply chain and annual deforestation datasets into an analytics-ready state through the following stages:
 
-Alur kerja *data engineering* dirancang untuk memproses data dari sumber hingga siap dianalisis melalui beberapa tahapan utama:
-
-#### 1. Alur Proses Pipeline (ETL & Validation)
+### 1. Pipeline Workflow (ELTL & Validation)
 ![Pipeline](https://github.com/torgusonyan/palm-oil-deforestation-indonesia/blob/main/workspace/Schema/pipeline.png?raw=true)
-* **Extraction**: Membaca dan mengumpulkan data mentah dari *website* CTDC tanpa membebani kinerja sistem sumber.
-* **Data Validation**: Memastikan data mematuhi logika bisnis (misal: validasi usia dan format data yang sesuai).
-* **Transformation**: 
-  * Pembersihan data: Menangani nilai kosong (*NULL*) dan menghapus baris duplikat.
-  * Pemformatan data: Mengubah data mentah menjadi format yang mudah dianalisis.
-* **Loading**: Memindahkan data yang sudah bersih dan valid ke destinasi akhir di basis data Neon.
+The pipeline follows an **ELTL (Extract → Clean & Validate → Load → Transform in Warehouse)** architecture:
+- **Extraction (`extract.py`)**: Ingests raw palm oil supply chain (`palm_oil_data_raw.csv`) and annual provincial deforestation (`palm_oil_deforestation_annual_province_raw.csv`) datasets using **PySpark**, filters records specifically for the **Kalimantan** region, standardizes column names to `snake_case`, and writes intermediate **Parquet** files to `temp_data/raw/`.
+- **Cleaning & Data Validation (`clean_validate.py`)**:
+  - **Data Cleaning**: Selects relevant columns, enforces consistent data types, handles `NULL` values, and removes duplicate records—resulting in **588,476** palm oil rows and **125** deforestation rows.
+  - **Data Validation**: Executes automated data quality checks using **Great Expectations** before writing validated outputs to `temp_data/clean/`.
+- **Loading (`load.py`)**: Loads cleaned Parquet datasets into **PostgreSQL** staging tables (`stg_palm_oil` and `stg_palm_deforestation`) via **PySpark JDBC** using `overwrite` mode for idempotency, followed by an automated row-count verification check using `psycopg2`.
+- **Transformation (`Schema.sql` & `join_query.sql`)**: Transforms staging data into a **Star Schema** inside PostgreSQL and creates a unified analytical view (`palm_oil`) for downstream exploration and visualization.
 
-#### 2. Airflow Orchestration
-* **DAG Structure**: Menggunakan 1 DAG (`FP_dag.py`) dengan 3 *task* linear: `extract` → `transform` → `load`.
-* **Execution**: Eksekusi dijalankan via `BashOperator`, di mana tiap *task* berjalan sebagai *subprocess* Python independen.
-* **Schedule**: Dijadwalkan berjalan setiap hari Sabtu, menit ke-10 hingga 30 (kelipatan 10) pada jam 09:00 pagi.
-* **Retry Policy**: Konfigurasi otomatis 1 kali percobaan ulang (*retry*) dengan jeda 5 menit jika terjadi kegagalan pada *task*.
+### 2. Airflow Orchestration
+- **DAG Structure**: Uses a single DAG (`elt_DAG.py`, DAG ID: `palm_oil_deforestation_etl`) consisting of **3 sequential tasks**: `extract` → `clean_validate` → `load`.
+- **Execution**: Orchestrated via `BashOperator`, running each stage as an independent Python subprocess inside `/workspace/dags/`. Configured with `max_active_runs=1` to prevent concurrent Spark sessions from exceeding container memory limits.
+- **Schedule**: Scheduled to run automatically every day (`@daily` / `0 0 * * *` UTC, or **07:00 WIB**) with `catchup=False`.
+- **Retry Policy**: Configured with **1 automatic retry** and a **1-minute retry delay** upon task failure.
 
-#### 3. Environment & Infrastructure
-* **Docker Setup**: Menggunakan Airflow via *Docker Compose* dengan *custom image* `airflow-spark` (basis `apache/airflow:2.3.4` yang dilengkapi Java serta pustaka pendukung seperti *great_expectations*, *pandas*, *sqlalchemy*, *beautifulsoup4*, *pyarrow*, dll).
-* **Storage Volume**: Folder direktori `data/`, `dags/`, `scripts/`, dan `logs/` di-mount sebagai *volume* lokal sehingga file *parquet* tetap aman meskipun *container* direstart.
+### 3. Environment & Infrastructure
+- **Docker Setup**: Built with **Docker Compose** (`docker-compose.yml` & `Dockerfile`) to run Apache Airflow, Apache Spark (**PySpark**), and **PostgreSQL** in an integrated containerized environment, pre-installed with `pyspark`, `great_expectations`, `pandas`, `psycopg2`, and the PostgreSQL JDBC Driver.
+- **Storage Volume & Repository Management**: The `workspace/` directory (containing `dags/`, `gx/`, `notebooks/`, and `Schema/`) is mounted as a local volume so intermediate Parquet files (`temp_data/`) persist across container restarts, while large raw CSV files and `.env` credentials are excluded via `.gitignore`.
+
 ### Database & Data Modeling 
 Transforming palm oil and deforestation data into an organized relational database structure, by separating deforestation information by province, product and supporting factors into fact and dimension tables to facilitate analysis.
 
