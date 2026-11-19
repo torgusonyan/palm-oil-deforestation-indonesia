@@ -51,12 +51,13 @@ Alur kerja *data engineering* dirancang untuk memproses data dari sumber hingga 
 * **Docker Setup**: Menggunakan Airflow via *Docker Compose* dengan *custom image* `airflow-spark` (basis `apache/airflow:2.3.4` yang dilengkapi Java serta pustaka pendukung seperti *great_expectations*, *pandas*, *sqlalchemy*, *beautifulsoup4*, *pyarrow*, dll).
 * **Storage Volume**: Folder direktori `data/`, `dags/`, `scripts/`, dan `logs/` di-mount sebagai *volume* lokal sehingga file *parquet* tetap aman meskipun *container* direstart.
 ### Database & Data Modeling 
-Proses ini mengubah data kasus *trafficking* dan *exploitation* menjadi struktur basis data relasional yang terorganisasi. Informasi terkait korban, eksploitasi, *recruitment*, dan faktor pendukung dipisahkan ke dalam tabel *fact* dan *dimension* untuk memudahkan analisis risiko dan *profiling* korban.
+Transforming palm oil and deforestation data into an organized relational database structure, by separating deforestation information by province, product and supporting factors into fact and dimension tables to facilitate analysis.
+
 #### Database Architecture 
 ![Star Schema](https://github.com/torgusonyan/palm-oil-deforestation-indonesia/blob/d1de7a5f53bb64154021a5c297efc8fadd43a52b/Schema/Schema.png?raw=true)
-Arsitektur basis data dirancang menggunakan *Star Schema*, yang terdiri dari:
-* **Fact Table (`fact_palm_oil`)**: Menyimpan metrik utama kasus dan kunci relasi (*Foreign Keys*).
-* **Dimension Tables**: Memisahkan atribut detail untuk menghindari redundansi data, yang meliputi:
+The database architecture is designed using *Star Schema*, which consists of:
+* **Fact Table (`fact_palm_oil`)**: Stores key case metrics and relationship keys (*Foreign Keys*).
+* **Dimension Tables**: Separating detail attributes to avoid data redundancy, which includes:
   * `dim_deforestation`: year, region, annual_palm_deforestation_hectares, 
   * `dim_province`: province_of_production_trase_id, province_of_production, kabupaten_of_production
   * `dim_product`: product_type, exporter_group, zero_deforestation_indonesia_palm_oil, country_of_first_import
@@ -81,7 +82,7 @@ JOIN dim_product pr ON f.product_key = pr.product_key
 LEFT JOIN dim_deforestation d
     ON f.region_trase_id = d.region_trase_id AND f.year = d.year;
 ```
-## **Data Dictionary** (note : ganti dictionary sesuai schema.sql)
+## **Data Dictionary** 
 
 #### A. Deforestation (dim_deforestation)
 
