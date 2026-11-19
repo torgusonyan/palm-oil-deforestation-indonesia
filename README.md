@@ -14,52 +14,52 @@ Oil palm expansion has been an important driver of deforestation in Indonesia fo
 In recent years, deforestation for industrial palm oil has been concentrated in the forest-rich provinces of Kalimantan. Four Kalimantan provinces accounted for 72% of all palm oil deforestation in Indonesia in 2018 to 2022 (Trase / SEI).
 Many exporters have zero-deforestation commitments, but the results are mixed: in 2021 to 2022, exporters with and without commitments sourced palm oil from areas with statistically similar deforestation rates (Trase / SEI).
 
-
 ## Stakeholder
-
 The stakeholder in this case are the sustainability/procurement team of a companny planning to buy palm oil from Kalimantan.
 
-
 ## **SDG**
-
 | SDG | Focus | Connection with Indonesian Palm oil |
 |---|---|---|
 | **SDG 15** | Life on Land | Deforestation and Habitat Loss, Land Degradation and Peatlands, and Sustainable Solution |
 
-
 ## **Data Engineering (Pipeline & Infrastructure)**
-### Data Engineering Pipeline
+The Data Engineering workflow is built to process raw Kalimantan palm oil supply chain and annual deforestation datasets into an analytics-ready state through the following stages:
 
-Alur kerja *data engineering* dirancang untuk memproses data dari sumber hingga siap dianalisis melalui beberapa tahapan utama:
+### 1. Pipeline Workflow (ELTL & Validation)
+![Pipeline](https://github.com/torgusonyan/palm-oil-deforestation-indonesia/blob/main/images/pipeline.png?raw=true)
 
-#### 1. Alur Proses Pipeline (ETL & Validation)
-![Pipeline](https://github.com/dutarangga3107-max/CODA-020-Final_Project/blob/main/Schema/pipeline%20.png?raw=true)
-* **Extraction**: Membaca dan mengumpulkan data mentah dari *website* CTDC tanpa membebani kinerja sistem sumber.
-* **Data Validation**: Memastikan data mematuhi logika bisnis (misal: validasi usia dan format data yang sesuai).
-* **Transformation**: 
-  * Pembersihan data: Menangani nilai kosong (*NULL*) dan menghapus baris duplikat.
-  * Pemformatan data: Mengubah data mentah menjadi format yang mudah dianalisis.
-* **Loading**: Memindahkan data yang sudah bersih dan valid ke destinasi akhir di basis data Neon.
+The pipeline follows an **ELTL (Extract → Clean & Validate → Load → Transform in Warehouse)** architecture:
+- **Extraction (`extract.py`)**: Ingests raw palm oil supply chain (`palm_oil_data_raw.csv`) and annual provincial deforestation (`palm_oil_deforestation_annual_province_raw.csv`) datasets using **PySpark**, filters records specifically for the **Kalimantan** region, standardizes column names to `snake_case`, and writes intermediate **Parquet** files to `temp_data/raw/`.
+- **Cleaning & Data Validation (`clean_validate.py`)**:
+  - **Data Cleaning**: Selects relevant columns, enforces consistent data types, handles `NULL` values, and removes duplicate records—resulting in **588,476** palm oil rows and **125** deforestation rows.
+  - **Data Validation**: Executes automated data quality checks using **Great Expectations** before writing validated outputs to `temp_data/clean/`.
+- **Loading (`load.py`)**: Loads cleaned Parquet datasets into **PostgreSQL** staging tables (`stg_palm_oil` and `stg_palm_deforestation`) via **PySpark JDBC** using `overwrite` mode for idempotency, followed by an automated row-count verification check using `psycopg2`.
+- **Transformation (`Schema.sql` & `join_query.sql`)**: Transforms staging data into a **Star Schema** inside PostgreSQL and creates a unified analytical view (`palm_oil`) for downstream exploration and visualization.
 
-#### 2. Airflow Orchestration
-* **DAG Structure**: Menggunakan 1 DAG (`FP_dag.py`) dengan 3 *task* linear: `extract` → `transform` → `load`.
-* **Execution**: Eksekusi dijalankan via `BashOperator`, di mana tiap *task* berjalan sebagai *subprocess* Python independen.
-* **Schedule**: Dijadwalkan berjalan setiap hari Sabtu, menit ke-10 hingga 30 (kelipatan 10) pada jam 09:00 pagi.
-* **Retry Policy**: Konfigurasi otomatis 1 kali percobaan ulang (*retry*) dengan jeda 5 menit jika terjadi kegagalan pada *task*.
+### 2. Airflow Orchestration
+- **DAG Structure**: Uses a single DAG (`elt_DAG.py`, DAG ID: `palm_oil_deforestation_etl`) consisting of **3 sequential tasks**: `extract` → `clean_validate` → `load`.
+- **Execution**: Orchestrated via `BashOperator`, running each stage as an independent Python subprocess inside `/workspace/dags/`. Configured with `max_active_runs=1` to prevent concurrent Spark sessions from exceeding container memory limits.
+- **Schedule**: Scheduled to run automatically every day (`@daily` / `0 0 * * *` UTC, or **07:00 WIB**) with `catchup=False`.
+- **Retry Policy**: Configured with **1 automatic retry** and a **1-minute retry delay** upon task failure.
 
-#### 3. Environment & Infrastructure
-* **Docker Setup**: Menggunakan Airflow via *Docker Compose* dengan *custom image* `airflow-spark` (basis `apache/airflow:2.3.4` yang dilengkapi Java serta pustaka pendukung seperti *great_expectations*, *pandas*, *sqlalchemy*, *beautifulsoup4*, *pyarrow*, dll).
-* **Storage Volume**: Folder direktori `data/`, `dags/`, `scripts/`, dan `logs/` di-mount sebagai *volume* lokal sehingga file *parquet* tetap aman meskipun *container* direstart.
-### Database & Data Modeling 
-Proses ini mengubah data kasus *trafficking* dan *exploitation* menjadi struktur basis data relasional yang terorganisasi. Informasi terkait korban, eksploitasi, *recruitment*, dan faktor pendukung dipisahkan ke dalam tabel *fact* dan *dimension* untuk memudahkan analisis risiko dan *profiling* korban.
-#### Database Architecture 
+### 3. Environment & Infrastructure
+- **Docker Setup**: Built with **Docker Compose** (`docker-compose.yml` & `Dockerfile`) to run Apache Airflow, Apache Spark (**PySpark**), and **PostgreSQL** in an integrated containerized environment, pre-installed with `pyspark`, `great_expectations`, `pandas`, `psycopg2`, and the PostgreSQL JDBC Driver.
+- **Storage Volume & Repository Management**: The `workspace/` directory (containing `dags/`, `gx/`, `notebooks/`, and `Schema/`) is mounted as a local volume so intermediate Parquet files (`temp_data/`) persist across container restarts, while large raw CSV files and `.env` credentials are excluded via `.gitignore`.
+
+---
+
+### Database & Data Modeling
+This stage structures the staged Kalimantan palm oil supply chain and deforestation data into a relational **OLAP** model. Quantitative metrics—such as trade volume, annual deforestation exposure, and total emission exposure—are separated from regional, product, and deforestation attributes into fact and dimension tables to support efficient analytical querying.
+
+#### Database Architecture
 ![Star Schema](https://github.com/torgusonyan/palm-oil-deforestation-indonesia/blob/d1de7a5f53bb64154021a5c297efc8fadd43a52b/Schema/Schema.png?raw=true)
-Arsitektur basis data dirancang menggunakan *Star Schema*, yang terdiri dari:
-* **Fact Table (`fact_palm_oil`)**: Menyimpan metrik utama kasus dan kunci relasi (*Foreign Keys*).
-* **Dimension Tables**: Memisahkan atribut detail untuk menghindari redundansi data, yang meliputi:
-  * `dim_deforestation`: year, region, annual_palm_deforestation_hectares, 
-  * `dim_province`: province_of_production_trase_id, province_of_production, kabupaten_of_production
-  * `dim_product`: product_type, exporter_group, zero_deforestation_indonesia_palm_oil, country_of_first_import
+
+The database is modeled using a **Star Schema** comprising:
+- **Fact Table (`fact_palm_oil`)**: Stores core quantitative metrics (`palm_oil_deforestation_annual_exposure`, `volume`, `total_emission_exposure`), temporal and spatial identifiers (`year`, `region_trase_id`), and foreign keys (`province_key`, `product_key`).
+- **Dimension Tables**: Normalize descriptive attributes to eliminate data redundancy:
+  - `dim_deforestation`: `region_trase_id`, `year`, `region`, `annual_palm_deforestation_hectares`
+  -
+
 ### Data Preparation
 #### Data Type Formatting & Integrity
 
