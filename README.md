@@ -53,17 +53,16 @@ Alur kerja *data engineering* dirancang untuk memproses data dari sumber hingga 
 ### Database & Data Modeling 
 Proses ini mengubah data kasus *trafficking* dan *exploitation* menjadi struktur basis data relasional yang terorganisasi. Informasi terkait korban, eksploitasi, *recruitment*, dan faktor pendukung dipisahkan ke dalam tabel *fact* dan *dimension* untuk memudahkan analisis risiko dan *profiling* korban.
 #### Database Architecture 
-![Star Schema](https://github.com/torgusonyan/palm-oil-deforestation-indonesia/blob/617afc73be751ac72135764f137c67f7515305bf/Schema/Schema.png?raw=true)
+![Star Schema](https://github.com/torgusonyan/palm-oil-deforestation-indonesia/blob/d1de7a5f53bb64154021a5c297efc8fadd43a52b/Schema/Schema.png?raw=true)
 Arsitektur basis data dirancang menggunakan *Star Schema*, yang terdiri dari:
-* **Fact Table (`fact_trafficking_cases`)**: Menyimpan metrik utama kasus dan kunci relasi (*Foreign Keys*).
+* **Fact Table (`fact_palm_oil`)**: Menyimpan metrik utama kasus dan kunci relasi (*Foreign Keys*).
 * **Dimension Tables**: Memisahkan atribut detail untuk menghindari redundansi data, yang meliputi:
-  * `dim_demographics`: Umur, *gender*, kewarganegaraan, dan negara eksploitasi.
-  * `dim_exploitation` & `dim_means`: Sektor, jenis eksploitasi, dan cara penjeratan.
-  * `dim_recruiter`: Hubungan perekrut dengan korban.
+  * `dim_deforestation`: year, region, annual_palm_deforestation_hectares, 
+  * `dim_province`: province_of_production_trase_id, province_of_production, kabupaten_of_production
+  * `dim_product`: product_type, exporter_group, zero_deforestation_indonesia_palm_oil, country_of_first_import
 ### Data Preparation
 #### Data Type Formatting & Integrity
-* **Penyesuaian Tipe Data**: Mengonfigurasi kolom waktu (seperti `yearOfRegistration`) menjadi format teks (`VARCHAR`) untuk menjaga konsistensi karakteristik data.
-* **Integritas Relasional**: Menerapkan *Primary Key* dan *Foreign Key* yang ketat antar tabel untuk mencegah inkonsistensi data saat proses penggabungan.
+
 
 ### SQL & Analytics
 Untuk mendukung analisis dan menjawab berbagai pertanyaan riset (*Key Questions*) tanpa harus menyusun sintaks `JOIN` yang rumit secara berulang, dirancang *SQL Views* terpusat yang menghubungkan *fact table* dengan berbagai tabel dimensi seperti demografi, eksploitasi, dan perekrut.
@@ -71,88 +70,67 @@ Untuk mendukung analisis dan menjawab berbagai pertanyaan riset (*Key Questions*
 Contoh implementasi *SQL View* untuk analisis demografi:
 
 ```sql
-CREATE VIEW analisis_demografi AS
-SELECT
-    f.case_id,
-    f.yearofregistration,
-    f.traffickmonths,
-    d.gender,
-    d.agebroad,
-    d.citizenship,
-    d.countryofexploitation
-FROM fact_trafficking_cases f
-JOIN dim_demographics d ON f.demographic_id = d.demographic_id;
+create view palm_oil AS
+SELECT f.*, p.province_of_production, p.kabupaten_of_production,
+       pr.product_type, pr.exporter_group,
+       pr.zero_deforestation_indonesia_palm_oil, pr.country_of_first_import,
+       d.annual_palm_deforestation_hectares
+FROM fact_palm_oil f
+JOIN dim_province p ON f.province_key = p.province_key
+JOIN dim_product pr ON f.product_key = pr.product_key
+LEFT JOIN dim_deforestation d
+    ON f.region_trase_id = d.region_trase_id AND f.year = d.year;
 ```
-## **Data Dictionary**
+## **Data Dictionary** (note : ganti dictionary sesuai schema.sql)
 
-#### A. DEMOGRAPHICS
+#### A. Deforestation
 
 | Column | Data Type | Definisi |
 |---|---|---|
-| `demographic_id` | serial | Primary key yang menjadi identitas unik setiap data demografi korban |
-| `gender` | varchar(50) | Gender korban |
-| `agebroad` | varchar(50) | Kelompok usia korban |
-| `citizenship` | varchar(100) | Kewarganegaraan korban |
-| `countryofexploitation` | varchar(100) | Negara tempat korban mengalami eksploitasi |
+| `region_trase_id` | varchar | Primary key yang menjadi identitas unik setiap data region |
+| `year` | integer | year |
+| `region` | varchar(100)  | region name |
+| `annual_palm_deforestation_hectares` | float | big deforestation happen |
 
 ---
 
-#### B. EXPLOITATION
+#### B. Province
 
 | Column | Data Type | Definisi |
 |---|---|---|
-| `exploitation_id` | serial | Primary key yang menjadi identitas unik setiap data eksploitasi |
-| `isforcedlabour` | boolean | Menunjukkan apakah korban mengalami forced labour |
-| `issexualexploit` | boolean | Menunjukkan apakah korban mengalami eksploitasi seksual |
-| `isotherexploit` | boolean | Menunjukkan apakah korban mengalami bentuk eksploitasi lainnya |
-| `sectoroflabouragriculture` | boolean | Menunjukkan apakah eksploitasi berkaitan dengan sektor pertanian |
-| `sectoroflabourconstruction` | boolean | Menunjukkan apakah eksploitasi berkaitan dengan sektor konstruksi |
-| `sectoroflabourdomesticwork` | boolean | Menunjukkan apakah eksploitasi berkaitan dengan pekerjaan domestik |
-| `sectoroflabourhospitality` | boolean | Menunjukkan apakah eksploitasi berkaitan dengan sektor hospitality |
-| `sectorofsexprostitution` | boolean | Menunjukkan apakah eksploitasi berkaitan dengan sektor prostitusi |
-| `sectorofsexpornography` | boolean | Menunjukkan apakah eksploitasi berkaitan dengan sektor pornografi |
+| `province_key` | serial | Primary key yang menjadi identitas unik setiap data province |
+| `province_of_production_trase_id` | varchar(100) | penomoran id |
+| `province_of_production` | varchar(100) | name of province production |
+| `kabupaten_of_production` | varchar(100) | name of kabupaten production |
 
 ---
 
-#### C. MEANS
+#### C. Product
 
 | Column | Data Type | Definisi |
 |---|---|---|
-| `means_id` | serial | Primary key yang menjadi identitas unik setiap data metode eksploitasi |
-| `meansdebtbondageearnings` | boolean | Menunjukkan penggunaan debt bondage atau keterikatan melalui utang/penghasilan dalam eksploitasi |
-| `meansthreats` | boolean | Menunjukkan penggunaan ancaman terhadap korban |
-| `meansabusepsyphysex` | boolean | Menunjukkan adanya penyalahgunaan atau kekerasan psikologis, fisik, atau seksual |
-| `meansfalsepromises` | boolean | Menunjukkan penggunaan janji palsu dalam proses recruitment atau eksploitasi |
-| `meansdrugsalcohol` | boolean | Menunjukkan keterlibatan drugs atau alcohol dalam proses eksploitasi |
-| `meansdenybasicneeds` | boolean | Menunjukkan adanya pembatasan atau penolakan kebutuhan dasar korban |
-| `meansexcessiveworkhours` | boolean | Menunjukkan pemberian jam kerja yang berlebihan kepada korban |
-| `meanswithholddocs` | boolean | Menunjukkan adanya penahanan dokumen pribadi korban |
+| `product_key` | serial | Primary key yang menjadi identitas unik setiap data product |
+| `product_type` | varchar(100) | name of the product type |
+| `exporter_group` | varchar(100) | name of the exporter_group |
+| `zero_deforestation_indonesia_palm_oil` | varchar(100) | show zero |
+| `country_of_first_import` | varchar(100) | name of the first import country |
 
 ---
 
-#### D. RECRUITER
+#### D. Palm Oil
 
 | Column | Data Type | Definisi |
 |---|---|---|
-| `recruiter_id` | serial | Primary key yang menjadi identitas unik setiap data hubungan recruiter |
-| `recruiterrelationintimatepartner` | boolean | Menunjukkan apakah recruiter merupakan pasangan atau intimate partner korban |
-| `recruiterrelationfriend` | boolean | Menunjukkan apakah recruiter merupakan teman korban |
-| `recruiterrelationfamily` | boolean | Menunjukkan apakah recruiter memiliki hubungan keluarga dengan korban |
-| `recruiterrelationother` | boolean | Menunjukkan apakah recruiter memiliki hubungan lainnya dengan korban |
+| `fact_id` | serial | Primary key yang menjadi identitas unik setiap data hubungan recruiter |
+| `province_key` | integer | foreign key that connect fact_palm with dim_province |
+| `product_key` | integer | Mforeign key that connect fact_palm with dim_product |
+| `region_trase_id` | varchar(100) | id regin trase |
+| `year` | integer | year |
+| `palm_oil_deforestation_annual_exposure` | float |  |
+| `volume` | float |  |
+| `total_emission_exposure` | float |  |
 
----
 
-#### E. TRAFFICKING CASES
-
-| Column | Data Type | Definisi |
-|---|---|---|
-| `case_id` | serial | Primary key yang menjadi identitas unik setiap kasus trafficking |
-| `yearofregistration` | varchar(10) | Tahun ketika kasus trafficking dicatat atau diregistrasikan |
-| `traffickmonths` | varchar(50) | Durasi korban mengalami trafficking atau eksploitasi dalam bulan |
-| `demographic_id` | integer | Foreign key yang menghubungkan kasus dengan data demografi korban |
-| `means_id` | integer | Foreign key yang menghubungkan kasus dengan metode eksploitasi |
-| `exploitation_id` | integer | Foreign key yang menghubungkan kasus dengan bentuk dan sektor eksploitasi |
-| `recruiter_id` | integer | Foreign key yang menghubungkan kasus dengan hubungan recruiter |
 
 ## **Problem Statement**
 We help the sustainability/procurement team of a palm oil buying company avoid sourcing from high deforestation risk areas, by analysing Trase palm oil supply chain data from 2018 to 2024 joined with industrial palm oil deforestation data per province, to identify the top 5 high-risk kabupaten in Kalimantan and the exporter groups sourcing from them, so that these can be avoided in sourcing decisions within the next 1 year.
@@ -182,11 +160,10 @@ Data Period: 2018 to 2024, includes the full range of the main dataset. The supp
 **1. Deforestation Intensity**<br>
 Total exposure / total volume x 1,000 (ha per 1,000 t), calculated per group.  
 Baseline: overall Kalimantan intensity.
-  
+
 **2. Top 5 Share of Province Deforestation (%)**<br>
 top 5 exposure / province industrial palm oil deforestation x 100
 
-  
 **3. Top 5 Volune Share (%)**<br>
 top 5 volume / total volume x 100
   
