@@ -1,14 +1,14 @@
-# **palm-oil-deforestation-indonesia**
+# **Tracing the Footprint: Identifying High-Risk Sourcing & Safer Suppliers in Kalimantan (2018–2024)**
+
 ### **Main Dataset Resource**:
 https://trase.earth/open-data/datasets/supply-chains-indonesia-palm-oil
 ### **Supporting Dataset Resource**:
 https://trase.earth/open-data/datasets/spatial-metrics-indonesia-palm-oil-palm-oil-deforestation-annual
 ### Team :
-**Data Engineer & Airflow Pipeline**: Ryan Farid Pratama
-
-**Database & Data Modeling**: Muhammad Hanif Al Abid
-
+**Data Engineer & Airflow Pipeline**: Ryan Farid Pratama <br>
+**Database & Data Modeling**: Muhammad Hanif Al Abid <br>
 **Data Analyst**: Narda Parama Agung Noviantoro
+
 ## **Background**
 Oil palm expansion has been an important driver of deforestation in Indonesia for the past 20 years, accounting for one third (3 million hectares) of Indonesia's loss of old-growth forest (Trase, 2024).
 In recent years, deforestation for industrial palm oil has been concentrated in the forest-rich provinces of Kalimantan. Four Kalimantan provinces accounted for 72% of all palm oil deforestation in Indonesia in 2018 to 2022 (Trase / SEI).
