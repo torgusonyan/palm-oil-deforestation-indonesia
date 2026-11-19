@@ -1,0 +1,22 @@
+{
+  "data": {
+    "asset": {
+      "id": "4abe8dee-86c2-4f7e-8c4e-aec765da5076",
+      "name": "deforestation-asset"
+    },
+    "batch_definition": {
+      "id": "80d3ae09-0d31-4eb0-9e37-4f63cdebeee2",
+      "name": "batch-definition-deforestation"
+    },
+    "datasource": {
+      "id": "c9f5a28c-4e35-4a1d-9822-f3da0953d336",
+      "name": "csv-raw-data-deforestation"
+    }
+  },
+  "id": "7eb4856e-d4c2-4142-9c2a-0a3440627d12",
+  "name": "validation-definition-deforestation",
+  "suite": {
+    "id": "c4708865-05ae-441e-bcf7-f3e2336190f0",
+    "name": "expectation-deforestation-dataset"
+  }
+}

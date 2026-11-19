@@ -1,0 +1,55 @@
+{
+  "expectations": [
+    {
+      "id": "406e5441-115c-4891-be70-78ff62c178a1",
+      "kwargs": {
+        "column": "region",
+        "value_set": [
+          "KALIMANTAN UTARA",
+          "KALIMANTAN SELATAN",
+          "KALIMANTAN TENGAH",
+          "KALIMANTAN BARAT",
+          "KALIMANTAN TIMUR"
+        ]
+      },
+      "meta": {},
+      "severity": "critical",
+      "type": "expect_column_values_to_be_in_set"
+    },
+    {
+      "id": "ccad6c1c-df91-45f6-895d-0efecd78e22e",
+      "kwargs": {
+        "column": "year",
+        "value_set": [
+          2018,
+          2019,
+          2020,
+          2021,
+          2022,
+          2023,
+          2024
+        ]
+      },
+      "meta": {},
+      "severity": "critical",
+      "type": "expect_column_distinct_values_to_contain_set"
+    },
+    {
+      "id": "08659703-5d52-461a-af87-5c8be8b389fe",
+      "kwargs": {
+        "column": "region_trase_id",
+        "max_value": 5,
+        "min_value": 1
+      },
+      "meta": {},
+      "severity": "critical",
+      "type": "expect_column_value_lengths_to_be_between"
+    }
+  ],
+  "id": "c4708865-05ae-441e-bcf7-f3e2336190f0",
+  "meta": {
+    "great_expectations_version": "1.24.1"
+  },
+  "name": "expectation-deforestation-dataset",
+  "notes": null
+}

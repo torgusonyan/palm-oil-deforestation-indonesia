@@ -1,0 +1,67 @@
+{
+  "expectations": [
+    {
+      "id": "ec902c5f-09a2-45a6-8665-b321950941ae",
+      "kwargs": {
+        "column": "product_type",
+        "value_set": [
+          "CRUDE PALM OIL",
+          "REFINED PALM OIL"
+        ]
+      },
+      "meta": {},
+      "severity": "critical",
+      "type": "expect_column_values_to_be_in_set"
+    },
+    {
+      "id": "d5c71b6c-a528-4be5-a413-309db7dc7384",
+      "kwargs": {
+        "column": "province_of_production",
+        "value_set": [
+          "KALIMANTAN TENGAH"
+        ]
+      },
+      "meta": {},
+      "severity": "critical",
+      "type": "expect_column_most_common_value_to_be_in_set"
+    },
+    {
+      "id": "eb058470-68a5-4905-9776-b81bf77cabec",
+      "kwargs": {
+        "column": "province_of_production_trase_id",
+        "column_index": 2
+      },
+      "meta": {},
+      "severity": "critical",
+      "type": "expect_column_to_exist"
+    },
+    {
+      "id": "554d84dc-a24d-453f-ad1b-92ae9240004d",
+      "kwargs": {
+        "column": "year",
+        "max_value": 2024.0,
+        "min_value": 2018.0
+      },
+      "meta": {},
+      "severity": "critical",
+      "type": "expect_column_values_to_be_between"
+    },
+    {
+      "id": "3df08670-3fc8-4979-96fc-60bdbc2169c6",
+      "kwargs": {
+        "column": "province_of_production_trase_id",
+        "max_value": 5,
+        "min_value": 1
+      },
+      "meta": {},
+      "severity": "critical",
+      "type": "expect_column_value_lengths_to_be_between"
+    }
+  ],
+  "id": "df6294f6-f2eb-4e9e-bb2d-0c16c5b9241d",
+  "meta": {
+    "great_expectations_version": "1.24.1"
+  },
+  "name": "expectation-palm-oil-dataset",
+  "notes": null
+}
