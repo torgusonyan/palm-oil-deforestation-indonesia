@@ -14,23 +14,18 @@ Oil palm expansion has been an important driver of deforestation in Indonesia fo
 In recent years, deforestation for industrial palm oil has been concentrated in the forest-rich provinces of Kalimantan. Four Kalimantan provinces accounted for 72% of all palm oil deforestation in Indonesia in 2018 to 2022 (Trase / SEI).
 Many exporters have zero-deforestation commitments, but the results are mixed: in 2021 to 2022, exporters with and without commitments sourced palm oil from areas with statistically similar deforestation rates (Trase / SEI).
 
-
 ## Stakeholder
-
 The stakeholder in this case are the sustainability/procurement team of a companny planning to buy palm oil from Kalimantan.
 
-
 ## **SDG**
-
 | SDG | Focus | Connection with Indonesian Palm oil |
 |---|---|---|
 | **SDG 15** | Life on Land | Deforestation and Habitat Loss, Land Degradation and Peatlands, and Sustainable Solution |
 
-
 ## **Data Engineering (Pipeline & Infrastructure)**
 The Data Engineering workflow is built to process raw Kalimantan palm oil supply chain and annual deforestation datasets into an analytics-ready state through the following stages:
 
-### 1. Pipeline Workflow (ELTL & Validation)
+### A. Pipeline Workflow (ELTL & Validation)
 ![Pipeline](https://github.com/torgusonyan/palm-oil-deforestation-indonesia/blob/main/workspace/Schema/pipeline.png?raw=true)
 The pipeline follows an **ELTL (Extract → Clean & Validate → Load → Transform in Warehouse)** architecture:
 - **Extraction (`extract.py`)**: Ingests raw palm oil supply chain (`palm_oil_data_raw.csv`) and annual provincial deforestation (`palm_oil_deforestation_annual_province_raw.csv`) datasets using **PySpark**, filters records specifically for the **Kalimantan** region, standardizes column names to `snake_case`, and writes intermediate **Parquet** files to `temp_data/raw/`.
@@ -40,13 +35,13 @@ The pipeline follows an **ELTL (Extract → Clean & Validate → Load → Transf
 - **Loading (`load.py`)**: Loads cleaned Parquet datasets into **PostgreSQL** staging tables (`stg_palm_oil` and `stg_palm_deforestation`) via **PySpark JDBC** using `overwrite` mode for idempotency, followed by an automated row-count verification check using `psycopg2`.
 - **Transformation (`Schema.sql` & `join_query.sql`)**: Transforms staging data into a **Star Schema** inside PostgreSQL and creates a unified analytical view (`palm_oil`) for downstream exploration and visualization.
 
-### 2. Airflow Orchestration
+### B. Airflow Orchestration
 - **DAG Structure**: Uses a single DAG (`elt_DAG.py`, DAG ID: `palm_oil_deforestation_etl`) consisting of **3 sequential tasks**: `extract` → `clean_validate` → `load`.
 - **Execution**: Orchestrated via `BashOperator`, running each stage as an independent Python subprocess inside `/workspace/dags/`. Configured with `max_active_runs=1` to prevent concurrent Spark sessions from exceeding container memory limits.
 - **Schedule**: Scheduled to run automatically every day (`@daily` / `0 0 * * *` UTC, or **07:00 WIB**) with `catchup=False`.
 - **Retry Policy**: Configured with **1 automatic retry** and a **1-minute retry delay** upon task failure.
 
-### 3. Environment & Infrastructure
+### C. Environment & Infrastructure
 - **Docker Setup**: Built with **Docker Compose** (`docker-compose.yml` & `Dockerfile`) to run Apache Airflow, Apache Spark (**PySpark**), and **PostgreSQL** in an integrated containerized environment, pre-installed with `pyspark`, `great_expectations`, `pandas`, `psycopg2`, and the PostgreSQL JDBC Driver.
 - **Storage Volume & Repository Management**: The `workspace/` directory (containing `dags/`, `gx/`, `notebooks/`, and `Schema/`) is mounted as a local volume so intermediate Parquet files (`temp_data/`) persist across container restarts, while large raw CSV files and `.env` credentials are excluded via `.gitignore`.
 
@@ -85,7 +80,6 @@ LEFT JOIN dim_deforestation d
 ## **Data Dictionary** 
 
 #### A. Deforestation (dim_deforestation)
-
 | Column | Data Type | Definisi |
 |---|---|---|
 | `region_trase_id` | varchar | Primary key yang menjadi identitas unik setiap data region |
@@ -96,7 +90,6 @@ LEFT JOIN dim_deforestation d
 ---
 
 #### B. Province (dim_province)
-
 | Column | Data Type | Definisi |
 |---|---|---|
 | `province_key` | serial | Primary key yang menjadi identitas unik setiap data province |
@@ -107,7 +100,6 @@ LEFT JOIN dim_deforestation d
 ---
 
 #### C. Product (dim_product)
-
 | Column | Data Type | Definisi |
 |---|---|---|
 | `product_key` | serial | Primary key yang menjadi identitas unik setiap data product |
@@ -119,7 +111,6 @@ LEFT JOIN dim_deforestation d
 ---
 
 #### D. Palm Oil (fact_palm_oil)
-
 | Column | Data Type | Definisi |
 |---|---|---|
 | `fact_id` | serial | Primary key yang menjadi identitas unik setiap data hubungan recruiter |
@@ -130,8 +121,6 @@ LEFT JOIN dim_deforestation d
 | `palm_oil_deforestation_annual_exposure` | float |  |
 | `volume` | float |  |
 | `total_emission_exposure` | float |  |
-
-
 
 ## **Problem Statement**
 We help the sustainability/procurement team of a palm oil buying company avoid sourcing from high deforestation risk areas, by analysing Trase palm oil supply chain data from 2018 to 2024 joined with industrial palm oil deforestation data per province, to identify the top 5 high-risk kabupaten in Kalimantan and the exporter groups sourcing from them, so that these can be avoided in sourcing decisions within the next 1 year.
@@ -156,7 +145,6 @@ Data Period: 2018 to 2024, includes the full range of the main dataset. The supp
 
 - **HOW**: How much of Kalimantan's deforestation exposure would be avoided if buyers stopped sourcing from the top 5 high-risk kabupaten?
 
-
 ## **Key Performance Indicators (KPI)**
 **1. Deforestation Intensity**<br>
 Total exposure / total volume x 1,000 (ha per 1,000 t), calculated per group.  
@@ -173,7 +161,10 @@ top 5 exposure / total exposure x 100.
   
 **5. Total Emission Exposure**<br>
 sum of emissions for the top 5 kabupaten
-  
+
+
+## **Dashboard**
+https://public.tableau.com/app/profile/narda.noviantoro/viz/DeforestationRiskinKalimantansPalmOilSupplyChain2018to2024/Dashboard?publish=yes
 
 ## **Conclusion**
 Deforestation risk in Kalimantan's palm oil supply chain (2018 to 2024) is concentrated in a few kabupaten. The top 5 high-risk kabupaten (Kota Palangkaraya, Kota Singkawang, Kapuas Hulu, Nunukan and Kutai Barat) have a deforestation intensity of 7.07 ha per 1,000 tonnes, about 7 times the rest of Kalimantan (0.99) and well above the 1.319 baseline. They supply only 5.37% of Kalimantan's palm oil volume but are linked to 28.78% of its deforestation exposure and 8.34% of its emissions exposure.
