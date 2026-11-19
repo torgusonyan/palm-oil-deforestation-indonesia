@@ -5,9 +5,7 @@ https://trase.earth/open-data/datasets/supply-chains-indonesia-palm-oil
 https://trase.earth/open-data/datasets/spatial-metrics-indonesia-palm-oil-palm-oil-deforestation-annual
 ### Team :
 **Data Engineer & Airflow Pipeline**: Ryan Farid Pratama
-
 **Database & Data Modeling**: Muhammad Hanif Al Abid
-
 **Data Analyst**: Narda Parama Agung Noviantoro
 ## **Background**
 Oil palm expansion has been an important driver of deforestation in Indonesia for the past 20 years, accounting for one third (3 million hectares) of Indonesia's loss of old-growth forest (Trase, 2024).
