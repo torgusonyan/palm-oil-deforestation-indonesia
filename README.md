@@ -27,13 +27,13 @@ The stakeholder in this case are the sustainability/procurement team of a compan
 | **SDG 15** | Life on Land | Deforestation and Habitat Loss, Land Degradation and Peatlands, and Sustainable Solution |
 
 
-## **Data Engineering (Pipeline & Infrastructure)**
+## **Data Engineering (Pipeline & Infrastructure)** (belum diganti)
 ### Data Engineering Pipeline
 
 Alur kerja *data engineering* dirancang untuk memproses data dari sumber hingga siap dianalisis melalui beberapa tahapan utama:
 
 #### 1. Alur Proses Pipeline (ETL & Validation)
-![Pipeline](https://github.com/dutarangga3107-max/CODA-020-Final_Project/blob/main/Schema/pipeline%20.png?raw=true)
+![Pipeline](https://github.com/torgusonyan/palm-oil-deforestation-indonesia/blob/main/workspace/Schema/pipeline.png?raw=true)
 * **Extraction**: Membaca dan mengumpulkan data mentah dari *website* CTDC tanpa membebani kinerja sistem sumber.
 * **Data Validation**: Memastikan data mematuhi logika bisnis (misal: validasi usia dan format data yang sesuai).
 * **Transformation**: 
@@ -51,23 +51,24 @@ Alur kerja *data engineering* dirancang untuk memproses data dari sumber hingga 
 * **Docker Setup**: Menggunakan Airflow via *Docker Compose* dengan *custom image* `airflow-spark` (basis `apache/airflow:2.3.4` yang dilengkapi Java serta pustaka pendukung seperti *great_expectations*, *pandas*, *sqlalchemy*, *beautifulsoup4*, *pyarrow*, dll).
 * **Storage Volume**: Folder direktori `data/`, `dags/`, `scripts/`, dan `logs/` di-mount sebagai *volume* lokal sehingga file *parquet* tetap aman meskipun *container* direstart.
 ### Database & Data Modeling 
-Proses ini mengubah data kasus *trafficking* dan *exploitation* menjadi struktur basis data relasional yang terorganisasi. Informasi terkait korban, eksploitasi, *recruitment*, dan faktor pendukung dipisahkan ke dalam tabel *fact* dan *dimension* untuk memudahkan analisis risiko dan *profiling* korban.
+Transforming palm oil and deforestation data into an organized relational database structure, by separating deforestation information by province, product and supporting factors into fact and dimension tables to facilitate analysis.
+
 #### Database Architecture 
 ![Star Schema](https://github.com/torgusonyan/palm-oil-deforestation-indonesia/blob/d1de7a5f53bb64154021a5c297efc8fadd43a52b/Schema/Schema.png?raw=true)
-Arsitektur basis data dirancang menggunakan *Star Schema*, yang terdiri dari:
-* **Fact Table (`fact_palm_oil`)**: Menyimpan metrik utama kasus dan kunci relasi (*Foreign Keys*).
-* **Dimension Tables**: Memisahkan atribut detail untuk menghindari redundansi data, yang meliputi:
+The database architecture is designed using *Star Schema*, which consists of:
+* **Fact Table (`fact_palm_oil`)**: Stores key case metrics and relationship keys (*Foreign Keys*).
+* **Dimension Tables**: Separating detail attributes to avoid data redundancy, which includes:
   * `dim_deforestation`: year, region, annual_palm_deforestation_hectares, 
   * `dim_province`: province_of_production_trase_id, province_of_production, kabupaten_of_production
   * `dim_product`: product_type, exporter_group, zero_deforestation_indonesia_palm_oil, country_of_first_import
 ### Data Preparation
 #### Data Type Formatting & Integrity
-
+Implement strict Primary Keys and Foreign Keys between tables to prevent data inconsistencies during the merge process.
 
 ### SQL & Analytics
-Untuk mendukung analisis dan menjawab berbagai pertanyaan riset (*Key Questions*) tanpa harus menyusun sintaks `JOIN` yang rumit secara berulang, dirancang *SQL Views* terpusat yang menghubungkan *fact table* dengan berbagai tabel dimensi seperti demografi, eksploitasi, dan perekrut.
+To support analysis and answer various research questions (*Key Questions*) without having to repeatedly compose complicated `JOIN` syntax, centralized *SQL Views* were designed that connect *fact tables* with various dimension tables such as demographics, exploits, and recruiters..
 
-Contoh implementasi *SQL View* untuk analisis demografi:
+the example of *SQL View* for analisys demography:
 
 ```sql
 create view palm_oil AS
@@ -81,9 +82,9 @@ JOIN dim_product pr ON f.product_key = pr.product_key
 LEFT JOIN dim_deforestation d
     ON f.region_trase_id = d.region_trase_id AND f.year = d.year;
 ```
-## **Data Dictionary** (note : ganti dictionary sesuai schema.sql)
+## **Data Dictionary** 
 
-#### A. Deforestation
+#### A. Deforestation (dim_deforestation)
 
 | Column | Data Type | Definisi |
 |---|---|---|
@@ -94,7 +95,7 @@ LEFT JOIN dim_deforestation d
 
 ---
 
-#### B. Province
+#### B. Province (dim_province)
 
 | Column | Data Type | Definisi |
 |---|---|---|
@@ -105,7 +106,7 @@ LEFT JOIN dim_deforestation d
 
 ---
 
-#### C. Product
+#### C. Product (dim_product)
 
 | Column | Data Type | Definisi |
 |---|---|---|
@@ -117,7 +118,7 @@ LEFT JOIN dim_deforestation d
 
 ---
 
-#### D. Palm Oil
+#### D. Palm Oil (fact_palm_oil)
 
 | Column | Data Type | Definisi |
 |---|---|---|
@@ -174,15 +175,8 @@ top 5 exposure / total exposure x 100.
 sum of emissions for the top 5 kabupaten
   
 
-## **Key Questions & Findings**
-**KQ1**. Risiko eksploitasi sangat dipengaruhi gender dan usia, perempuan (khususnya anak 09–17 tahun) dominan mengalami eksploitasi seksual, sementara laki-laki dominan mengalami kerja paksa, dengan pola yang juga bervariasi menurut kewarganegaraan.<br>
-**KQ2.** Setiap sektor memiliki "signature" eksploitasi yang khas dan hampir murni satu jenis seperti sektor seks (prostitusi, pornografi) hampir eksklusif eksploitasi seksual, sektor kerja fisik (agriculture, construction) hampir eksklusif kerja paksa, kecuali hospitality yang menunjukkan risiko ganda.<br>
-**KQ3.** Relasi personal yang dekat (intimate partner, family) justru berkorelasi dengan rate eksploitasi seksual tertinggi, sedangkan relasi non-personal ("other"/agen) lebih berkorelasi dengan kerja paksa  membalikkan asumsi umum bahwa orang asing adalah ancaman utama.<br>
-**KQ4.** Anak perempuan yang direkrut melalui relasi dekat memiliki risiko eksploitasi seksual paling ekstrem, sementara anak laki-laki menunjukkan pola eksploitasi yang lebih campuran antara kerja paksa dan seksual.<br>
-**KQ5.** Profil korban dengan risiko paling ekstrem adalah kombinasi anak usia sangat muda, sektor eksploitasi seksual, dan direkrut oleh keluarga sendiri seperti menunjukkan bahwa kombinasi faktor demografis, sektor, dan relasi recruiter jauh lebih prediktif dibanding faktor tunggal manapun.<br>
-**KQ6**. Berdasarkan uji statistik Spearman ($\rho = 0,7204$; $p = 0,000106$), jumlah korban dengan hubungan rekrutmen Other menunjukkan tren peningkatan jangka panjang yang signifikan dengan puncak tertinggi pada 2016, sementara kategori Family, Friend, dan Intimate Partner masing-masing mencapai puncaknya pada 2016 atau 2019 sebelum mengalami penurunan hingga tahun 2024.
-
 ## **Conclusion**
-Proyek ini berhasil mengungkap bahwa risiko TPPO terbentuk dari kombinasi spesifik antara siapa korbannya (usia, gender, kewarganegaraan), di sektor apa mereka dieksploitasi, dan melalui relasi apa mereka direkrut dengan relasi kedekatan personal sebagai titik kerentanan yang paling kritis namun paling sulit dideteksi. Temuan ini memberikan dasar berbasis data bagi pemangku kepentingan untuk merancang intervensi yang lebih tepat sasaran tidak hanya berfokus pada pengawasan jalur migrasi kerja formal dan sindikat eksternal, tetapi juga pada edukasi dan deteksi dini terhadap pola manipulasi hubungan dekat di lingkungan terdekat korban.
+Deforestation risk in Kalimantan's palm oil supply chain (2018 to 2024) is concentrated in a few kabupaten. The top 5 high-risk kabupaten (Kota Palangkaraya, Kota Singkawang, Kapuas Hulu, Nunukan and Kutai Barat) have a deforestation intensity of 7.07 ha per 1,000 tonnes, about 7 times the rest of Kalimantan (0.99) and well above the 1.319 baseline. They supply only 5.37% of Kalimantan's palm oil volume but are linked to 28.78% of its deforestation exposure and 8.34% of its emissions exposure.
 
-Correlation between deforestation and palm oil industries
+Avoiding the top 5 kabupaten would remove almost 30% of deforestation exposure while only about 5% of supply needs to be replaced. Exporter commitments alone do not guarantee lower risk, as Zero Deforestation exporters have the highest intensity (1.81 ha per 1,000 tonnes) and NDPE the lowest (0.74). Buyers can shift to lower-risk exporter groups such as Cargill and First Resources, while still checking that their supply does not come from the top 5 kabupaten.
+
